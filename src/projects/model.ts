@@ -96,3 +96,38 @@ export function scheduleSummary(schedule: Schedule): string {
   }[schedule.every] || schedule.every;
   return schedule.enabled ? when : `${when} (paused)`;
 }
+
+export type ScheduleForm = {
+  name: string; prompt: string; every: Exclude<Schedule['every'], 'cron'>;
+  time: string; minute: string; weekday: number; trackId: string | null; cli: string | null; enabled: boolean;
+  /** Whether the timing was touched: a schedule's own timing (a cron, say) is kept otherwise. */
+  timingChanged: boolean;
+};
+
+/** "9:30" → [9, 30]; null when it is not a time. */
+function parseTime(text: string): [number, number] | null {
+  const match = /^(\d{1,2})(?::(\d{2}))?$/.exec(text.trim());
+  if (!match) return null;
+  const hour = Number(match[1]);
+  const minute = Number(match[2] || 0);
+  return hour <= 23 && minute <= 59 ? [hour, minute] : null;
+}
+
+/** What create-schedule or update-schedule gets from the form, or what is wrong with it. */
+export function scheduleFields(existing: Schedule | undefined, form: ScheduleForm): { fields: Record<string, unknown>; error?: undefined } | { error: string; fields?: undefined } {
+  if (!form.name.trim() || !form.prompt.trim()) return { error: 'A schedule needs a name and a prompt' };
+  const fields: Record<string, unknown> = { name: form.name.trim(), prompt: form.prompt.trim(), trackId: form.trackId, cli: form.cli, enabled: form.enabled };
+  if (existing && !form.timingChanged) return { fields };
+  fields.every = form.every;
+  if (form.every === 'hour') {
+    const minute = Number(form.minute);
+    if (!/^\d{1,2}$/.test(form.minute.trim()) || minute > 59) return { error: 'The minute goes from 0 to 59' };
+    fields.atMinute = minute;
+  } else if (form.every === 'day' || form.every === 'weekdays' || form.every === 'week') {
+    const at = parseTime(form.time);
+    if (!at) return { error: 'Write the time as 9:30' };
+    [fields.atHour, fields.atMinute] = at;
+    if (form.every === 'week') fields.weekday = form.weekday;
+  }
+  return { fields };
+}

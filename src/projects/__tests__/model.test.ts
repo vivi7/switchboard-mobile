@@ -1,7 +1,7 @@
 import { expect, test } from '@jest/globals';
 
 import { noticesFrom, type LiveState } from '@/sessions/model';
-import { groupProjects, launchTarget, phaseItemPrompt, phasePrompt, projectSessions, rollupState, scheduleSummary, todoPrompt, type Project, type ProjectPlan, type Schedule } from '../model';
+import { groupProjects, launchTarget, phaseItemPrompt, phasePrompt, projectSessions, rollupState, scheduleFields, scheduleSummary, todoPrompt, type Project, type ProjectPlan, type Schedule } from '../model';
 
 const now = Date.parse('2026-11-01T15:00:00Z');
 const project = (id: string, extra: Partial<Project> = {}): Project => ({
@@ -70,4 +70,17 @@ test('a schedule reads as when it runs', () => {
   expect(scheduleSummary(s({ every: 'week', weekday: 1, atHour: 9, atMinute: 0 }))).toBe('Mondays at 09:00');
   expect(scheduleSummary(s({ every: 'cron', cron: '0 3 * * *' }))).toBe('Cron 0 3 * * *');
   expect(scheduleSummary(s({ enabled: false }))).toBe('Every day at 09:00 (paused)');
+});
+
+test('saving a schedule sends its timing only when it was changed, so a cron one keeps its cron', () => {
+  const cron = { id: 's', name: 'Imported', prompt: 'p', every: 'cron', atHour: null, atMinute: null, weekday: null, cron: '0 */2 * * 1-5', enabled: true, cli: null, trackId: null, projectId: 'p1', cwd: null, lastRunAt: null } as Schedule;
+  const form = { name: 'Renamed', prompt: 'p', every: 'day' as const, time: '9:00', minute: '0', weekday: 1, trackId: null, cli: null, enabled: true };
+  expect(scheduleFields(cron, { ...form, timingChanged: false })).toEqual({ fields: { name: 'Renamed', prompt: 'p', trackId: null, cli: null, enabled: true } });
+  expect(scheduleFields(cron, { ...form, timingChanged: true })).toEqual({ fields: { name: 'Renamed', prompt: 'p', trackId: null, cli: null, enabled: true, every: 'day', atHour: 9, atMinute: 0 } });
+  expect(scheduleFields(undefined, { ...form, every: 'week', time: '18:30', weekday: 5, timingChanged: false }).fields).toMatchObject({ every: 'week', atHour: 18, atMinute: 30, weekday: 5 });
+  expect(scheduleFields(undefined, { ...form, every: 'hour', minute: '15', timingChanged: false }).fields).toMatchObject({ every: 'hour', atMinute: 15 });
+  expect(scheduleFields(undefined, { ...form, every: '15m', timingChanged: false }).fields).toMatchObject({ every: '15m' });
+  expect(scheduleFields(undefined, { ...form, time: '25:00', timingChanged: false })).toEqual({ error: 'Write the time as 9:30' });
+  expect(scheduleFields(undefined, { ...form, every: 'hour', minute: '61', timingChanged: false })).toEqual({ error: 'The minute goes from 0 to 59' });
+  expect(scheduleFields(undefined, { ...form, name: ' ', timingChanged: false })).toEqual({ error: 'A schedule needs a name and a prompt' });
 });

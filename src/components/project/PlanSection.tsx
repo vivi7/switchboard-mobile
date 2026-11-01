@@ -34,7 +34,8 @@ export function PlanSection({ projectId, data, onChanged, onStart }: {
     try { await act(method, params); } catch (err: any) { Alert.alert('That did not work', err.message); }
     onChanged();
   };
-  const tick = (file: File, line: number, done: boolean) => run('set-plan-item', [projectId, file, line, done]);
+  // The text seen on the line goes along: the computer changes nothing if the plan moved meanwhile.
+  const tick = (file: File, item: { line: number; text: string }, done: boolean) => run('set-plan-item', [projectId, file, item.line, done, item.text]);
   const isOpen = (phase: Phase) => open[phase.line] ?? (phase.line === plan.next?.line);
 
   const startFor = (target: Selected): StartRequest => target.file === 'todos'
@@ -53,7 +54,7 @@ export function PlanSection({ projectId, data, onChanged, onStart }: {
           <ItemRow
             key={phase.line}
             item={{ line: phase.line, text: phase.title, done: phase.done }}
-            onTick={(done) => tick('plan', phase.line, done)}
+            onTick={(done) => tick('plan', { line: phase.line, text: phase.title }, done)}
             onLongPress={() => setSelected({ file: 'plan', item: { line: phase.line, text: phase.title, done: phase.done }, phase })}
           />
         ) : (
@@ -65,7 +66,7 @@ export function PlanSection({ projectId, data, onChanged, onStart }: {
               accessibilityRole="button"
               accessibilityState={{ expanded: isOpen(phase) }}
             >
-              <Check done={phase.done} onPress={() => tick('plan', phase.line, !phase.done)} />
+              <Check done={phase.done} onPress={() => tick('plan', { line: phase.line, text: phase.title }, !phase.done)} />
               <Text style={[styles.phaseTitle, phase.done && styles.doneText]} numberOfLines={2}>{phase.title}</Text>
               <Text style={styles.count}>{phase.ticked}/{phase.items.length}</Text>
               <Ionicons name={isOpen(phase) ? 'chevron-down' : 'chevron-forward'} size={14} color={colors.textFaint} />
@@ -75,7 +76,7 @@ export function PlanSection({ projectId, data, onChanged, onStart }: {
                 key={item.line}
                 item={item}
                 indent
-                onTick={(done) => tick('plan', item.line, done)}
+                onTick={(done) => tick('plan', item, done)}
                 onLongPress={() => setSelected({ file: 'plan', item, phase })}
               />
             )) : null}
@@ -86,7 +87,7 @@ export function PlanSection({ projectId, data, onChanged, onStart }: {
 
       <Section title={todos.length ? `Todos · ${todos.filter((t) => !t.done).length} open` : 'Todos'}>
         {todos.map((item) => (
-          <ItemRow key={item.line} item={item} onTick={(done) => tick('todos', item.line, done)} onLongPress={() => setSelected({ file: 'todos', item })} />
+          <ItemRow key={item.line} item={item} onTick={(done) => tick('todos', item, done)} onLongPress={() => setSelected({ file: 'todos', item })} />
         ))}
         <SectionLink label="Add a todo…" onPress={() => setAdding('todos')} />
       </Section>
@@ -108,7 +109,6 @@ export function PlanSection({ projectId, data, onChanged, onStart }: {
             label: 'Start a session on this phase',
             onPress: () => onStart({ title: selectedPhase.title, prompt: phasePrompt(data, selectedPhase), planItem: { file: 'plan', itemText: selectedPhase.title } }),
           },
-          { label: 'Edit…', onPress: () => setEditing({ file: 'plan', item: { line: selectedPhase.line, text: selectedPhase.title, done: selectedPhase.done } }) },
         ] : []}
         onClose={() => setSelectedPhase(null)}
       />
@@ -117,7 +117,7 @@ export function PlanSection({ projectId, data, onChanged, onStart }: {
         title="Edit"
         initialValue={editing?.item.text || ''}
         onClose={() => setEditing(null)}
-        onSubmit={(text) => { if (editing && text && text !== editing.item.text) run('edit-plan-item', [projectId, editing.file, editing.item.line, text]); }}
+        onSubmit={(text) => { if (editing && text && text !== editing.item.text) run('edit-plan-item', [projectId, editing.file, editing.item.line, text, editing.item.text]); }}
       />
       <TextPrompt
         visible={!!adding}

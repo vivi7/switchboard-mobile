@@ -143,7 +143,14 @@ export default function ProjectScreen() {
         title={folderActions ? shortProjectPath(folderActions.path) : ''}
         options={folderActions ? [{
           label: folderActions.mode === 'worktree' ? 'Detach and remove the worktree' : 'Detach from the project', destructive: true,
-          onPress: () => run('detach-project-folder', [project.id, folderActions.path, { removeWorktree: folderActions.mode === 'worktree' }]),
+          onPress: () => {
+            const folder = folderActions;
+            if (folder.mode !== 'worktree') { run('detach-project-folder', [project.id, folder.path, { removeWorktree: false }]); return; }
+            Alert.alert('Remove the worktree?', `${shortProjectPath(folder.path)} is deleted from disk, with files git ignores (such as .env copies). Its branch stays.`, [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Remove', style: 'destructive', onPress: () => run('detach-project-folder', [project.id, folder.path, { removeWorktree: true }]) },
+            ]);
+          },
         }] : []}
         onClose={() => setFolderActions(null)}
       />

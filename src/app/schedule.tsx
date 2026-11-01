@@ -3,7 +3,7 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState, type ReactNode } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
-import type { Schedule } from '@/projects/model';
+import { scheduleFields, scheduleSummary, type Schedule } from '@/projects/model';
 import { act, useProject } from '@/projects/queries';
 import { request, useConnection } from '@/store/connection';
 import { colors, spacing } from '@/theme';
@@ -14,15 +14,6 @@ const EVERY: { key: Every; label: string }[] = [
   { key: 'day', label: 'Daily' }, { key: 'weekdays', label: 'Weekdays' }, { key: 'week', label: 'Weekly' },
 ];
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
-/** "9:30" → [9, 30]; null when it is not a time. */
-function parseTime(text: string): [number, number] | null {
-  const match = /^(\d{1,2})(?::(\d{2}))?$/.exec(text.trim());
-  if (!match) return null;
-  const hour = Number(match[1]);
-  const minute = Number(match[2] || 0);
-  return hour <= 23 && minute <= 59 ? [hour, minute] : null;
-}
 
 /** A new schedule for a project (projectId), or one to change (id). */
 export default function ScheduleScreen() {
@@ -41,16 +32,15 @@ export default function ScheduleScreen() {
   const [trackId, setTrackId] = useState<string | null>(existing?.trackId || null);
   const [cli, setCli] = useState<string | null>(existing?.cli || null);
   const [enabled, setEnabled] = useState(existing?.enabled ?? true);
+  const [timingChanged, setTimingChanged] = useState(false);
   const [saving, setSaving] = useState(false);
+  const timing = <T,>(set: (value: T) => void) => (value: T) => { setTimingChanged(true); set(value); };
+  // A cron set on the computer stays until another timing is picked.
+  const keepsCron = existing?.every === 'cron' && !timingChanged;
 
   const save = async () => {
-    const at = parseTime(time);
-    const atMinute = Number(minute);
-    if (!name.trim() || !prompt.trim()) return Alert.alert('A schedule needs a name and a prompt');
-    if (['day', 'weekdays', 'week'].includes(every) && !at) return Alert.alert('Write the time as 9:30');
-    if (every === 'hour' && !(Number.isInteger(atMinute) && atMinute >= 0 && atMinute <= 59)) return Alert.alert('The minute goes from 0 to 59');
-    const timing = every === 'hour' ? { atMinute } : at && every !== '15m' && every !== '30m' ? { atHour: at[0], atMinute: at[1], ...(every === 'week' ? { weekday } : {}) } : {};
-    const fields = { name: name.trim(), prompt: prompt.trim(), every, ...timing, trackId, cli, enabled };
+    const { fields, error } = scheduleFields(existing, { name, prompt, every, time, minute, weekday, trackId, cli, enabled, timingChanged });
+    if (error) return Alert.alert(error);
     setSaving(true);
     try {
       if (existing) await act('update-schedule', [existing.id, fields]);
@@ -78,13 +68,14 @@ export default function ScheduleScreen() {
         <Label>Prompt</Label>
         <TextInput value={prompt} onChangeText={setPrompt} placeholder="What the session should do" placeholderTextColor={colors.textFaint} style={[styles.input, styles.prompt]} multiline textAlignVertical="top" />
         <Label>Runs</Label>
-        <Chips items={EVERY} selected={every} onSelect={setEvery} />
-        {every === 'hour' ? (
-          <TextInput value={minute} onChangeText={setMinute} keyboardType="number-pad" placeholder="Minute" placeholderTextColor={colors.textFaint} style={[styles.input, styles.short]} />
+        {keepsCron ? <Text style={styles.hint}>{scheduleSummary(existing)}, set on the computer. Pick another timing to replace it.</Text> : null}
+        <Chips items={EVERY} selected={keepsCron ? null : every} onSelect={timing(setEvery)} />
+        {keepsCron ? null : every === 'hour' ? (
+          <TextInput value={minute} onChangeText={timing(setMinute)} keyboardType="number-pad" placeholder="Minute" placeholderTextColor={colors.textFaint} style={[styles.input, styles.short]} />
         ) : every === 'day' || every === 'weekdays' || every === 'week' ? (
-          <TextInput value={time} onChangeText={setTime} keyboardType="numbers-and-punctuation" placeholder="9:30" placeholderTextColor={colors.textFaint} style={[styles.input, styles.short]} />
+          <TextInput value={time} onChangeText={timing(setTime)} keyboardType="numbers-and-punctuation" placeholder="9:30" placeholderTextColor={colors.textFaint} style={[styles.input, styles.short]} />
         ) : null}
-        {every === 'week' ? <Chips items={DAYS.map((label, key) => ({ key, label }))} selected={weekday} onSelect={setWeekday} /> : null}
+        {!keepsCron && every === 'week' ? <Chips items={DAYS.map((label, key) => ({ key, label }))} selected={weekday} onSelect={timing(setWeekday)} /> : null}
         {tracks.length ? (
           <>
             <Label>Where</Label>
@@ -111,7 +102,7 @@ function Label({ children }: { children: ReactNode }) {
   return <Text style={styles.label}>{children}</Text>;
 }
 
-function Chips<K>({ items, selected, onSelect }: { items: { key: K; label: string }[]; selected: K; onSelect: (key: K) => void }) {
+function Chips<K>({ items, selected, onSelect }: { items: { key: K; label: string }[]; selected: K | null; onSelect: (key: K) => void }) {
   return (
     <View style={styles.chips}>
       {items.map((item) => (
