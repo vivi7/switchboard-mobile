@@ -132,8 +132,12 @@ const styles = StyleSheet.create({
   commandText: { color: colors.textDim, fontFamily: mono, fontSize: 13 },
 });
 
-const markdownStyles = StyleSheet.create({
+export const markdownStyles = StyleSheet.create({
   body: { color: colors.text, fontSize: 15, lineHeight: 22 },
+  // The body's line height would clip larger headings.
+  heading1: { fontSize: 24, lineHeight: 30, fontWeight: '700', marginTop: 8, marginBottom: 4 },
+  heading2: { fontSize: 20, lineHeight: 26, fontWeight: '700', marginTop: 8, marginBottom: 4 },
+  heading3: { fontSize: 17, lineHeight: 24, fontWeight: '600', marginTop: 6, marginBottom: 2 },
   code_inline: { fontFamily: mono, backgroundColor: colors.surface, color: colors.text, borderRadius: 4 },
   fence: { fontFamily: mono, fontSize: 12, backgroundColor: colors.surface, color: colors.text, borderColor: colors.border, borderRadius: 6 },
   code_block: { fontFamily: mono, fontSize: 12, backgroundColor: colors.surface, color: colors.text, borderColor: colors.border, borderRadius: 6 },

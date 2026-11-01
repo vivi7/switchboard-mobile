@@ -33,11 +33,16 @@ export default function RootLayout() {
           contentStyle: { backgroundColor: colors.background },
         }}
       >
-        <Stack.Screen name="index" options={{ title: 'Sessions' }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false, title: 'Back' }} />
         <Stack.Screen name="pair" options={{ title: 'Pair with a computer' }} />
         <Stack.Screen name="settings" options={{ title: 'Computer' }} />
         <Stack.Screen name="new" options={{ title: 'New session' }} />
         <Stack.Screen name="session/[id]" options={{ title: 'Session' }} />
+        <Stack.Screen name="project/[id]" options={{ title: 'Project' }} />
+        <Stack.Screen name="folders" options={{ title: 'Choose a folder' }} />
+        <Stack.Screen name="files" options={{ title: 'Files' }} />
+        <Stack.Screen name="file" options={{ title: 'File' }} />
+        <Stack.Screen name="schedule" options={{ title: 'Schedule' }} />
       </Stack>
       <AttentionToast />
     </QueryClientProvider>

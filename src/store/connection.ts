@@ -107,7 +107,13 @@ export const useConnection = create<ConnectionStore>((set, get) => {
           queryClient.invalidateQueries({ queryKey: ['projects'] });
           // A session just started sends nothing else until it works.
           refreshLive();
-          if (args[0] === 'project') queryClient.invalidateQueries({ queryKey: ['project-tree'] });
+          // Project pages list sessions too.
+          queryClient.invalidateQueries({ queryKey: ['project-tree'] });
+          if (args[0] === 'project') queryClient.invalidateQueries({ queryKey: ['project-plan'] });
+          return;
+        }
+        if (event === 'project-plan-changed') {
+          queryClient.invalidateQueries({ queryKey: ['project-plan', args[0]] });
           return;
         }
         if (event === 'process-exited' || event === 'session-detected' || event === 'session-forked') {

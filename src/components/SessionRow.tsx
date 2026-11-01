@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { cliLabel, relativeTime, sessionTitle, type RowState, type Session } from '@/sessions/model';
 import { colors, spacing } from '@/theme';
 
-const STATE_COLORS: Record<RowState, string> = {
+export const STATE_COLORS: Record<RowState, string> = {
   attention: colors.attention,
   busy: colors.accent,
   unread: colors.unread,
@@ -20,10 +20,10 @@ const STATE_LABELS: Record<RowState, string> = {
   idle: '',
 };
 
-type Props = { session: Session; state: RowState; onPress: (session: Session) => void; onLongPress: (session: Session) => void };
+type Props = { session: Session; state: RowState; onPress: (session: Session) => void; onLongPress: (session: Session) => void; inset?: boolean };
 
 /** One session: its state dot, title, and the CLI, age and size underneath. */
-export const SessionRow = memo(function SessionRow({ session, state, onPress, onLongPress }: Props) {
+export const SessionRow = memo(function SessionRow({ session, state, onPress, onLongPress, inset }: Props) {
   const meta = [cliLabel(session), relativeTime(session.modified || session.created)];
   if (session.messageCount) meta.push(`${session.messageCount} msgs`);
   if (STATE_LABELS[state]) meta.unshift(STATE_LABELS[state]);
@@ -31,7 +31,7 @@ export const SessionRow = memo(function SessionRow({ session, state, onPress, on
     <Pressable
       onPress={() => onPress(session)}
       onLongPress={() => onLongPress(session)}
-      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.row, inset && styles.inset, pressed && styles.pressed]}
       accessibilityRole="button"
       accessibilityLabel={`${sessionTitle(session)}, ${meta.join(', ')}`}
     >
@@ -58,6 +58,8 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     backgroundColor: colors.background,
   },
+  // Inside a padded block, such as a project's track.
+  inset: { paddingHorizontal: 0 },
   pressed: { backgroundColor: colors.surface },
   dot: { width: 9, height: 9, borderRadius: 5, borderWidth: 1 },
   text: { flex: 1, gap: 3 },

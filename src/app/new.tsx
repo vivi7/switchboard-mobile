@@ -41,7 +41,8 @@ function targetsOf(tree: ProjectNode[], folders: Folder[]): Target[] {
  * (mode=resume&sessionId=…), through the computer's launch-session.
  */
 export default function NewSessionScreen() {
-  const params = useLocalSearchParams<{ mode?: 'new' | 'resume'; sessionId?: string }>();
+  // target: a project (p:<id>) or track (t:<id>) to start in, from its page.
+  const params = useLocalSearchParams<{ mode?: 'new' | 'resume'; sessionId?: string; target?: string }>();
   const resume = params.mode === 'resume' && !!params.sessionId;
   const online = useConnection((s) => s.status.state === 'online');
   const refreshLive = useConnection((s) => s.refreshLive);
@@ -52,7 +53,7 @@ export default function NewSessionScreen() {
   const resumed = resume ? (projects.data || []).flatMap((f) => f.sessions).find((s) => s.sessionId === params.sessionId) : undefined;
 
   const targets = useMemo(() => targetsOf(tree.data?.projects || [], projects.data || []), [tree.data, projects.data]);
-  const [targetKey, setTargetKey] = useState<string | null>(null);
+  const [targetKey, setTargetKey] = useState<string | null>(params.target || null);
   const [showAll, setShowAll] = useState(false);
   const target = resume ? null : targets.find((t) => t.key === targetKey) || targets[0];
   // The first few, and the chosen one; the rest behind "Show all".

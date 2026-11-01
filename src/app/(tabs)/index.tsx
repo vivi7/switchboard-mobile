@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { Link, Redirect, router, Stack } from 'expo-router';
+import { Link, Redirect, router, Tabs } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, SectionList, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -67,7 +67,7 @@ export default function SessionsScreen() {
 
   return (
     <View style={styles.screen}>
-      <Stack.Screen
+      <Tabs.Screen
         options={{
           title: desktop.name,
           headerLeft: () => (
