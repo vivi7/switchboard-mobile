@@ -15,6 +15,11 @@ type ConnectionStore = {
   desktop: SavedDesktop | null;
   status: ConnectionStatus;
   live: Record<string, LiveState>;
+  /** The session open on screen, so it is not announced as needing you. */
+  viewing: string | null;
+  setViewing(sessionId: string | null): void;
+  /** Read every live session's state again. */
+  refreshLive(): Promise<void>;
   /** Load the saved computer and connect to it. */
   init(): Promise<void>;
   /** Pair with the computer in a scanned QR code, then connect to it. */
@@ -26,6 +31,15 @@ type ConnectionStore = {
 };
 
 let client: RemoteClient | null = null;
+
+type DesktopEventListener = (event: string, args: any[]) => void;
+const eventListeners = new Set<DesktopEventListener>();
+
+/** Hear every event from the computer (terminal output, state changes). Returns the unsubscribe. */
+export function onDesktopEvent(listener: DesktopEventListener): () => void {
+  eventListeners.add(listener);
+  return () => { eventListeners.delete(listener); };
+}
 
 /** Call the computer. Rejects when not connected. */
 export function request<T = any>(method: string, params: unknown[] = []): Promise<T> {
@@ -62,8 +76,13 @@ export const useConnection = create<ConnectionStore>((set, get) => {
         }
       },
       onEvent: (event, args) => {
+        for (const listener of eventListeners) {
+          try { listener(event, args); } catch {}
+        }
         if (event === 'projects-changed') {
           queryClient.invalidateQueries({ queryKey: ['projects'] });
+          // A session just started sends nothing else until it works.
+          refreshLive();
           if (args[0] === 'project') queryClient.invalidateQueries({ queryKey: ['project-tree'] });
           return;
         }
@@ -82,6 +101,9 @@ export const useConnection = create<ConnectionStore>((set, get) => {
     desktop: null,
     status: { state: 'closed' },
     live: {},
+    viewing: null,
+    setViewing: (sessionId) => set({ viewing: sessionId }),
+    refreshLive,
 
     async init() {
       const desktop = await loadActiveDesktop();
