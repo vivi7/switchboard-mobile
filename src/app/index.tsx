@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { Link, Redirect, Stack } from 'expo-router';
+import { Link, Redirect, router, Stack } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, SectionList, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -54,10 +54,11 @@ export default function SessionsScreen() {
     [projects.data, filter, live, search, matches.data],
   );
 
-  const open = useCallback((session: Session) => setSelected(session), []);
+  const open = useCallback((session: Session) => router.push({ pathname: '/session/[id]', params: { id: session.sessionId } }), []);
+  const showActions = useCallback((session: Session) => setSelected(session), []);
   const renderItem = useCallback(
-    ({ item }: { item: Session }) => <SessionRow session={item} state={sessionState(live[item.sessionId])} onPress={open} onLongPress={open} />,
-    [live, open],
+    ({ item }: { item: Session }) => <SessionRow session={item} state={sessionState(live[item.sessionId])} onPress={open} onLongPress={showActions} />,
+    [live, open, showActions],
   );
 
   if (!loaded) return <View style={styles.center}><ActivityIndicator color={colors.accent} /></View>;
@@ -68,10 +69,17 @@ export default function SessionsScreen() {
       <Stack.Screen
         options={{
           title: desktop.name,
-          headerRight: () => (
+          headerLeft: () => (
             <Link href="/settings" asChild>
               <Pressable hitSlop={10} accessibilityLabel="Computer settings">
                 <Text style={styles.headerButton}>Computer</Text>
+              </Pressable>
+            </Link>
+          ),
+          headerRight: () => (
+            <Link href="/new" asChild>
+              <Pressable hitSlop={10} accessibilityLabel="New session">
+                <Text style={styles.headerButton}>New</Text>
               </Pressable>
             </Link>
           ),

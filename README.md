@@ -11,10 +11,14 @@ The app talks directly to the Switchboard desktop app running on your computer, 
 - Pairs with a computer by scanning the QR code from Switchboard's **Mobile app access** dialog.
 - Lists every session, grouped by folder, newest first, with its live state: working, waiting for you, running.
 - Searches what was said in your sessions, and filters to running, pinned or today's sessions.
-- Renames, pins, moves to a project, archives or stops a session (long-press or tap a row).
-- Reconnects on its own when the computer comes back, and says why when it cannot.
+- Opens a session as a **chat** (the conversation, with tool calls you can expand) or as a **live terminal** (xterm.js), with keys a phone keyboard lacks (Esc, Tab, arrows, Ctrl-C, Shift+Enter) and a line to type into.
+- **Fit to phone** resizes the session's terminal to the phone while you look at it; the computer gets its own size back when you leave.
+- Starts a new Claude, Codex or terminal session in a project, track or folder, with a first message and the same options as the desktop; resumes (with or without changed options) and forks.
+- Renames, pins, moves to a project, archives or stops a session (long-press a row).
+- Tells you, while the app is open, when another session needs you or finishes its turn.
+- Reconnects on its own when the computer comes back, picking each terminal up where it left off, and says why when it cannot.
 
-Coming next: a live terminal for each session, a chat view of the conversation, starting and resuming sessions, projects, and Git with the Git Graph.
+Coming next: projects (plan, todos, files), and Git with the Git Graph.
 
 ## Use it with Expo Go
 
@@ -51,6 +55,7 @@ npm test              # Jest: the protocol client, pairing links, the session li
 npm run typecheck
 npm run lint
 npm run sync-shared   # copy the shared modules from ../switchboard (master)
+npm run build-terminal # rebuild the terminal page from @xterm/xterm (also runs after npm install)
 ```
 
 Add dependencies with `npx expo install <package>`, so their versions match the Expo SDK. Keep to modules Expo Go includes, so the app keeps running in Expo Go.
