@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import { pairWithDesktop, RemoteClient, type ConnectionStatus } from '@/remote/client';
 import { queryClient } from '@/remote/query';
 import type { PairingPayload } from '@/remote/pairing';
+import { applyDiffEvent, diffsFrom, type PendingDiffs } from '@/diffs/model';
 import { applyLiveEvent, noticesFrom, type LiveState, type Notices } from '@/sessions/model';
 import { desktopFromPairing, keyPairOf, linkOf, loadActiveDesktop, removeDesktop, saveDesktop, type SavedDesktop } from './desktops';
 
@@ -17,6 +18,8 @@ type ConnectionStore = {
   live: Record<string, LiveState>;
   /** Unread and needs-you marks, shared with the desktop. */
   notices: Notices;
+  /** IDE diffs waiting for an answer, by diff id. */
+  diffs: PendingDiffs;
   /** The session open on screen: not announced as needing you, and read on the desktop too. */
   viewing: string | null;
   setViewing(sessionId: string | null): void;
@@ -63,6 +66,12 @@ export const useConnection = create<ConnectionStore>((set, get) => {
     } catch {}
   }
 
+  async function refreshDiffs() {
+    try {
+      set({ diffs: diffsFrom(await request('list-pending-diffs')) });
+    } catch {}
+  }
+
   async function refreshNotices() {
     try {
       set({ notices: noticesFrom(await request('get-session-notices')) });
@@ -86,6 +95,7 @@ export const useConnection = create<ConnectionStore>((set, get) => {
           // Everything may have changed while offline.
           refreshLive();
           refreshNotices();
+          refreshDiffs();
           tellViewing();
           queryClient.invalidateQueries();
           if (status.address !== get().desktop?.lastAddress) {
@@ -121,6 +131,8 @@ export const useConnection = create<ConnectionStore>((set, get) => {
         }
         const live = applyLiveEvent(get().live, event, args);
         if (live !== get().live) set({ live });
+        const diffs = applyDiffEvent(get().diffs, event, args);
+        if (diffs !== get().diffs) set({ diffs });
       },
     });
     client.start();
@@ -132,6 +144,7 @@ export const useConnection = create<ConnectionStore>((set, get) => {
     status: { state: 'closed' },
     live: {},
     notices: noNotices(),
+    diffs: {},
     viewing: null,
     setViewing: (sessionId) => {
       set({ viewing: sessionId });
@@ -154,7 +167,7 @@ export const useConnection = create<ConnectionStore>((set, get) => {
       const { device, hello, address } = await pairWithDesktop(link, payload.code, deviceName);
       const desktop = desktopFromPairing(payload, device, hello, address);
       await saveDesktop(desktop, { makeActive: true });
-      set({ desktop, live: {}, notices: noNotices() });
+      set({ desktop, live: {}, notices: noNotices(), diffs: {} });
       queryClient.clear();
       connect(desktop);
     },
@@ -165,7 +178,7 @@ export const useConnection = create<ConnectionStore>((set, get) => {
       client = null;
       if (desktop) await removeDesktop(desktop.deviceId);
       queryClient.clear();
-      set({ desktop: null, status: { state: 'closed' }, live: {}, notices: noNotices() });
+      set({ desktop: null, status: { state: 'closed' }, live: {}, notices: noNotices(), diffs: {} });
     },
 
     reconnect() {

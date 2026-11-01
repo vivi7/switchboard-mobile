@@ -8,7 +8,7 @@ import { sessionTitle, type Folder } from '@/sessions/model';
 import { onDesktopEvent, useConnection } from '@/store/connection';
 import { colors, spacing } from '@/theme';
 
-type Notice = { sessionId: string; title: string; text: string; kind: 'attention' | 'idle' };
+type Notice = { sessionId: string; title: string; text: string; kind: 'attention' | 'idle'; diffId?: string };
 
 const SHOW_MS = 6000;
 
@@ -22,17 +22,24 @@ export function AttentionToast() {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => onDesktopEvent((event, args) => {
-    if (event !== 'terminal-notification') return;
-    const [sessionId, message, kind] = args;
-    if ((kind !== 'attention' && kind !== 'idle') || sessionId === useConnection.getState().viewing) return;
-    const folders = queryClient.getQueryData<Folder[]>(['projects']) || [];
-    const session = folders.flatMap((f) => f.sessions).find((s) => s.sessionId === sessionId);
-    setNotice({
-      sessionId,
-      title: session ? sessionTitle(session) : 'A session',
-      text: kind === 'attention' ? (message || 'needs you') : 'finished and is waiting for you',
-      kind,
-    });
+    let next: Notice;
+    const titleOf = (sessionId: string) => {
+      const folders = queryClient.getQueryData<Folder[]>(['projects']) || [];
+      const session = folders.flatMap((f) => f.sessions).find((s) => s.sessionId === sessionId);
+      return session ? sessionTitle(session) : 'A session';
+    };
+    if (event === 'mcp-open-diff') {
+      // A change to review: always worth saying, even for the session on screen.
+      const [sessionId, diffId, data] = args;
+      next = { sessionId, diffId, title: titleOf(sessionId), text: `wants to change ${String(data?.oldFilePath || '').split('/').pop()}`, kind: 'attention' };
+    } else if (event === 'terminal-notification') {
+      const [sessionId, message, kind] = args;
+      if ((kind !== 'attention' && kind !== 'idle') || sessionId === useConnection.getState().viewing) return;
+      next = { sessionId, title: titleOf(sessionId), text: kind === 'attention' ? (message || 'needs you') : 'finished and is waiting for you', kind };
+    } else {
+      return;
+    }
+    setNotice(next);
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => setNotice(null), SHOW_MS);
   }), []);
@@ -40,7 +47,11 @@ export function AttentionToast() {
   if (!notice) return null;
   return (
     <Pressable
-      onPress={() => { setNotice(null); router.push({ pathname: '/session/[id]', params: { id: notice.sessionId } }); }}
+      onPress={() => {
+        setNotice(null);
+        if (notice.diffId) router.push({ pathname: '/ide-diff', params: { diffId: notice.diffId } });
+        else router.push({ pathname: '/session/[id]', params: { id: notice.sessionId } });
+      }}
       style={[styles.toast, { top: insets.top + spacing.sm }, notice.kind === 'attention' && styles.attention]}
       accessibilityRole="alert"
     >

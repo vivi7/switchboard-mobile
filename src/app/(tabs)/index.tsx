@@ -33,6 +33,9 @@ export default function SessionsScreen() {
   const online = useConnection((s) => s.status.state === 'online');
   const live = useConnection((s) => s.live);
   const notices = useConnection((s) => s.notices);
+  const diffs = useConnection((s) => s.diffs);
+  // A change to review waits for you as much as a question does.
+  const reviewing = useMemo(() => new Set(Object.values(diffs).map((d) => d.sessionId)), [diffs]);
   const [filter, setFilter] = useState<SessionFilter>('all');
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<Session | null>(null);
@@ -58,8 +61,8 @@ export default function SessionsScreen() {
   const open = useCallback((session: Session) => router.push({ pathname: '/session/[id]', params: { id: session.sessionId } }), []);
   const showActions = useCallback((session: Session) => setSelected(session), []);
   const renderItem = useCallback(
-    ({ item }: { item: Session }) => <SessionRow session={item} state={rowState(item.sessionId, live[item.sessionId], notices)} onPress={open} onLongPress={showActions} />,
-    [live, notices, open, showActions],
+    ({ item }: { item: Session }) => <SessionRow session={item} state={reviewing.has(item.sessionId) ? 'attention' : rowState(item.sessionId, live[item.sessionId], notices)} onPress={open} onLongPress={showActions} />,
+    [live, notices, reviewing, open, showActions],
   );
 
   if (!loaded) return <View style={styles.center}><ActivityIndicator color={colors.accent} /></View>;

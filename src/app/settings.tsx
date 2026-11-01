@@ -46,6 +46,9 @@ export default function SettingsScreen() {
           <Text style={styles.buttonText}>Reconnect now</Text>
         </Pressable>
       ) : null}
+      <Pressable onPress={() => router.push('/usage')} style={styles.button} accessibilityRole="button">
+        <Text style={styles.buttonText}>Usage and limits</Text>
+      </Pressable>
       <Pressable onPress={() => router.push('/pair')} style={styles.button} accessibilityRole="button">
         <Text style={styles.buttonText}>Pair again</Text>
       </Pressable>

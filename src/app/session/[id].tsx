@@ -28,6 +28,8 @@ export default function SessionScreen() {
   const session = (projects.data || []).flatMap((f) => f.sessions).find((s) => s.sessionId === sessionId);
   const isTerminal = session?.type === 'terminal';
   const running = sessionState(live) !== 'idle';
+  const diffs = useConnection((s) => s.diffs);
+  const waiting = Object.values(diffs).filter((d) => d.sessionId === sessionId);
   const [tab, setTab] = useState<Tab>(params.tab === 'terminal' ? 'terminal' : 'chat');
   const shownTab: Tab = isTerminal ? 'terminal' : tab;
 
@@ -72,6 +74,13 @@ export default function SessionScreen() {
           ) : null,
         }}
       />
+      {waiting.length ? (
+        <Pressable onPress={() => router.push({ pathname: '/ide-diff', params: { diffId: waiting[0].diffId } })} style={styles.diffBanner} accessibilityRole="button">
+          <Text style={styles.diffBannerText} numberOfLines={1}>
+            {waiting.length === 1 ? `Wants to change ${waiting[0].oldFilePath.split('/').pop()}` : `${waiting.length} changes to review`} · Review
+          </Text>
+        </Pressable>
+      ) : null}
       {!isTerminal ? (
         <View style={styles.tabs}>
           {(['chat', 'terminal'] as Tab[]).map((t) => (
@@ -113,6 +122,8 @@ export default function SessionScreen() {
 }
 
 const styles = StyleSheet.create({
+  diffBanner: { backgroundColor: 'rgba(224,160,80,0.18)', paddingHorizontal: spacing.lg, paddingVertical: spacing.sm },
+  diffBannerText: { color: colors.attention, fontSize: 14, fontWeight: '600' },
   screen: { flex: 1, backgroundColor: colors.background },
   flex: { flex: 1 },
   body: { flex: 1 },
