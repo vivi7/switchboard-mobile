@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -36,10 +36,12 @@ export default function SessionScreen() {
     if ((event === 'session-detected' || event === 'session-forked') && args[0] === sessionId) setSessionId(args[1]);
   }), [sessionId]);
 
-  useEffect(() => {
+  // While this screen is in front: another screen pushed on top, or going
+  // back to it, changes what is on screen without unmounting it.
+  useFocusEffect(useCallback(() => {
     setViewing(sessionId);
-    return () => setViewing(null);
-  }, [sessionId, setViewing]);
+    return () => { if (useConnection.getState().viewing === sessionId) setViewing(null); };
+  }, [sessionId, setViewing]));
 
   const send = useCallback((data: string) => { request('terminal-input', [sessionId, data]).catch(() => {}); }, [sessionId]);
 

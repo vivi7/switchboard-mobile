@@ -6,7 +6,7 @@ import { ActivityIndicator, Pressable, RefreshControl, SectionList, StyleSheet, 
 import { ConnectionBanner } from '@/components/ConnectionBanner';
 import { SessionActions } from '@/components/SessionActions';
 import { SessionRow } from '@/components/SessionRow';
-import { buildSections, sessionState, type Folder, type Session, type SessionFilter } from '@/sessions/model';
+import { buildSections, rowState, type Folder, type Session, type SessionFilter } from '@/sessions/model';
 import { request, useConnection } from '@/store/connection';
 import { colors, spacing } from '@/theme';
 
@@ -32,6 +32,7 @@ export default function SessionsScreen() {
   const desktop = useConnection((s) => s.desktop);
   const online = useConnection((s) => s.status.state === 'online');
   const live = useConnection((s) => s.live);
+  const notices = useConnection((s) => s.notices);
   const [filter, setFilter] = useState<SessionFilter>('all');
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<Session | null>(null);
@@ -57,8 +58,8 @@ export default function SessionsScreen() {
   const open = useCallback((session: Session) => router.push({ pathname: '/session/[id]', params: { id: session.sessionId } }), []);
   const showActions = useCallback((session: Session) => setSelected(session), []);
   const renderItem = useCallback(
-    ({ item }: { item: Session }) => <SessionRow session={item} state={sessionState(live[item.sessionId])} onPress={open} onLongPress={showActions} />,
-    [live, open, showActions],
+    ({ item }: { item: Session }) => <SessionRow session={item} state={rowState(item.sessionId, live[item.sessionId], notices)} onPress={open} onLongPress={showActions} />,
+    [live, notices, open, showActions],
   );
 
   if (!loaded) return <View style={styles.center}><ActivityIndicator color={colors.accent} /></View>;

@@ -17,6 +17,7 @@ export default function RootLayout() {
     // iOS drops the socket in the background; reconnect as soon as the app is back.
     const subscription = AppState.addEventListener('change', (state) => {
       if (state === 'active') useConnection.getState().reconnect();
+      useConnection.getState().setForeground(state === 'active');
     });
     return () => subscription.remove();
   }, []);

@@ -10,6 +10,7 @@ export const colors = {
   accent: '#8088ff',
   attention: '#e0a050',
   running: '#4caf8f',
+  unread: '#4fc3f7',
   danger: '#e06c75',
 };
 

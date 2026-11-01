@@ -31,6 +31,16 @@ export type SessionFilter = 'all' | 'running' | 'starred' | 'today';
 
 export type SessionState = 'attention' | 'busy' | 'running' | 'idle';
 
+/**
+ * Unread and needs-you marks, as the desktop window keeps them: a session that
+ * finished, or asked for something, while nobody was looking. Opening it on
+ * the desktop or on a phone clears them.
+ */
+export type Notices = { ready: Set<string>; attention: Set<string> };
+
+/** What a row shows: the live states, plus finished and not yet read. */
+export type RowState = SessionState | 'unread';
+
 /** Same cleanup as the desktop's cleanDisplayName. */
 export function cleanDisplayName(name: string | null | undefined): string {
   if (!name) return '';
@@ -83,6 +93,22 @@ export function sessionState(live: LiveState | undefined): SessionState {
   if (live.attention) return 'attention';
   if (live.busy) return 'busy';
   return 'running';
+}
+
+/** The marks from get-session-notices or its event. */
+export function noticesFrom(raw: unknown): Notices {
+  const ids = (list: unknown) => new Set(Array.isArray(list) ? list.filter((id): id is string => typeof id === 'string') : []);
+  const value = (raw && typeof raw === 'object' ? raw : {}) as { ready?: unknown; attention?: unknown };
+  return { ready: ids(value.ready), attention: ids(value.attention) };
+}
+
+/** Needs-you first (live, or kept by the desktop), then working, then unread, as the desktop orders them. */
+export function rowState(sessionId: string, live: LiveState | undefined, notices: Notices): RowState {
+  const state = sessionState(live);
+  if (state === 'attention' || notices.attention.has(sessionId)) return 'attention';
+  if (state === 'busy') return 'busy';
+  if (notices.ready.has(sessionId)) return 'unread';
+  return state;
 }
 
 function isToday(session: Session, now: number): boolean {

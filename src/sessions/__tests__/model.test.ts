@@ -1,5 +1,5 @@
 import { expect, test } from '@jest/globals';
-import { applyLiveEvent, buildSections, cleanDisplayName, relativeTime, sessionState, sessionTitle, shortProjectPath, type Folder, type LiveState } from '../model';
+import { applyLiveEvent, buildSections, cleanDisplayName, noticesFrom, relativeTime, rowState, sessionState, sessionTitle, shortProjectPath, type Folder, type LiveState } from '../model';
 
 const now = Date.parse('2026-11-01T15:00:00Z');
 const at = (minutesAgo: number) => new Date(now - minutesAgo * 60000).toISOString();
@@ -64,4 +64,25 @@ test('events move a session between working, waiting and stopped', () => {
   expect(sessionState(live.s2)).toBe('running');
   live = applyLiveEvent(live, 'process-exited', ['s2', 0, 0, false]);
   expect(sessionState(live.s2)).toBe('idle');
+});
+
+test('the desktop\'s marks arrive as sets, whatever shape they come in', () => {
+  const notices = noticesFrom({ ready: ['a', 'b'], attention: ['c'] });
+  expect([...notices.ready]).toEqual(['a', 'b']);
+  expect(notices.attention.has('c')).toBe(true);
+  expect(noticesFrom(null).ready.size).toBe(0);
+  expect(noticesFrom({ ready: 'a', attention: [1, 'd'] })).toEqual({ ready: new Set(), attention: new Set(['d']) });
+});
+
+test('a row shows needs-you, then working, then unread, then running', () => {
+  const idle: LiveState = { busy: false, attention: false, exited: false, starting: false };
+  const notices = noticesFrom({ ready: ['done', 'busy', 'asked'], attention: ['asked-on-desktop'] });
+  expect(rowState('done', undefined, notices)).toBe('unread');
+  expect(rowState('done', idle, notices)).toBe('unread');
+  expect(rowState('busy', { ...idle, busy: true }, notices)).toBe('busy');
+  expect(rowState('asked', { ...idle, attention: true }, notices)).toBe('attention');
+  // Needs-you outlives the process on the desktop until someone opens the session.
+  expect(rowState('asked-on-desktop', undefined, notices)).toBe('attention');
+  expect(rowState('other', idle, notices)).toBe('running');
+  expect(rowState('other', undefined, notices)).toBe('idle');
 });

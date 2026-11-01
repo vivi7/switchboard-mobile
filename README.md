@@ -9,12 +9,12 @@ The app talks directly to the Switchboard desktop app running on your computer, 
 ## What it does today
 
 - Pairs with a computer by scanning the QR code from Switchboard's **Mobile app access** dialog.
-- Lists every session, grouped by folder, newest first, with its live state: working, waiting for you, running.
+- Lists every session, grouped by folder, newest first, with its live state: working, waiting for you, unread, running. Unread and waiting-for-you are the same marks the desktop shows: opening a session on the phone reads it on the computer too.
 - Searches what was said in your sessions, and filters to running, pinned or today's sessions.
 - Opens a session as a **chat** (the conversation, with tool calls you can expand) or as a **live terminal** (xterm.js), with keys a phone keyboard lacks (Esc, Tab, arrows, Ctrl-C, Shift+Enter) and a line to type into.
 - **Fit to phone** resizes the session's terminal to the phone while you look at it; the computer gets its own size back when you leave.
 - Starts a new Claude, Codex or terminal session in a project, track or folder, with a first message and the same options as the desktop; resumes (with or without changed options) and forks.
-- Renames, pins, moves to a project, archives or stops a session (long-press a row).
+- Renames, pins, moves to a project, marks as read or unread, archives or stops a session (long-press a row).
 - Tells you, while the app is open, when another session needs you or finishes its turn.
 - Reconnects on its own when the computer comes back, picking each terminal up where it left off, and says why when it cannot.
 

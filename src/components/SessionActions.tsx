@@ -25,6 +25,7 @@ async function run(action: Promise<unknown>) {
 /** The actions for one session, from a long press on its row. */
 export function SessionActions({ session, onClose }: { session: Session | null; onClose: () => void }) {
   const live = useConnection((s) => (session ? s.live[session.sessionId] : undefined));
+  const unread = useConnection((s) => !!session && s.notices.ready.has(session.sessionId));
   const [renaming, setRenaming] = useState<Session | null>(null);
   const [moving, setMoving] = useState<Session | null>(null);
   const running = sessionState(live) !== 'idle';
@@ -35,6 +36,8 @@ export function SessionActions({ session, onClose }: { session: Session | null; 
     options.push({ label: 'Rename…', onPress: () => setRenaming(session) });
     options.push({ label: session.starred ? 'Unpin' : 'Pin', onPress: () => run(request('toggle-star', [id])) });
     if (session.type !== 'terminal') options.push({ label: 'Move to project…', onPress: () => setMoving(session) });
+    // The desktop answers with its new marks (session-notices-changed).
+    if (session.type !== 'terminal') options.push({ label: unread ? 'Mark as read' : 'Mark as unread', onPress: () => run(request(unread ? 'mark-read' : 'mark-unread', [id])) });
     if (running) {
       options.push({
         label: 'Stop', destructive: true,
