@@ -96,7 +96,12 @@ function backtrack(a: string[], b: string[], trace: Int32Array[], last: number):
 
 /** Two versions of a file as a unified diff, `context` lines around each change. */
 export function lineDiff(before: string, after: string, context = 3, maxEdits = 1500): DiffLine[] {
-  const ops = editScript(toLines(before), toLines(after), maxEdits);
+  const a = toLines(before);
+  const b = toLines(after);
+  // A file added or deleted whole: nothing to compare, however long.
+  const ops = !a.length ? b.map((text): Op => ({ type: '+', text }))
+    : !b.length ? a.map((text): Op => ({ type: '-', text }))
+    : editScript(a, b, maxEdits);
   if (!ops) return [{ kind: 'meta', text: 'Too many changes to show here.' }];
   const changes = ops.map((op, i) => (op.type === ' ' ? -1 : i)).filter((i) => i >= 0);
   if (!changes.length) return [];

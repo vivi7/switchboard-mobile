@@ -17,8 +17,24 @@ export type GraphAction = {
 
 type Target = { hash: string; parents: string[]; kind: 'commit' | 'stash' | 'uncommitted'; stashIndex?: number | null; refs?: Refs; shortHash: string; subject: string };
 
-/** What a row of the graph offers, given the branch checked out and the remotes. */
-export function rowActions(row: Target, { currentBranch, remotes }: { currentBranch: string | null; remotes: string[] }): GraphAction[] {
+/** The remote a new branch or a tag goes to: origin when there is one. */
+export function defaultRemote(remotes: string[]): string | null {
+  return remotes.includes('origin') ? 'origin' : remotes[0] || null;
+}
+
+/**
+ * Pushing a branch: to the remote it tracks, as git chooses it (remotes left
+ * empty), or, for a branch that tracks nothing, to the default remote, which
+ * it then tracks. The label names the remote.
+ */
+export function pushAction(branch: string, upstream: string | null | undefined, remotes: string[]): GraphAction | null {
+  if (upstream) return { label: `Push ${branch} to ${upstream.split('/')[0]}`, actionId: 'pushBranch', params: { branch, remotes: [], setUpstream: false, force: 'none' } };
+  const remote = defaultRemote(remotes);
+  return remote ? { label: `Push ${branch} to ${remote} (and track it)`, actionId: 'pushBranch', params: { branch, remotes: [remote], setUpstream: true, force: 'none' } } : null;
+}
+
+/** What a row of the graph offers, given the branch checked out, the remotes and what each branch tracks. */
+export function rowActions(row: Target, { currentBranch, remotes, upstreams = {} }: { currentBranch: string | null; remotes: string[]; upstreams?: Record<string, string | null> }): GraphAction[] {
   if (row.kind === 'uncommitted') {
     return [
       { label: 'Stash the changes', actionId: 'stashPush', params: { includeUntracked: true } },
@@ -27,12 +43,14 @@ export function rowActions(row: Target, { currentBranch, remotes }: { currentBra
     ];
   }
   if (row.kind === 'stash') {
-    const stashRef = `stash@{${row.stashIndex ?? 0}}`;
+    if (row.stashIndex === null || row.stashIndex === undefined) return [];
+    // The hash lets the computer check it is still this stash at that index.
+    const stash = { stashRef: `stash@{${row.stashIndex}}`, stashHash: row.hash };
     return [
-      { label: 'Apply stash', actionId: 'stashApply', params: { stashRef } },
-      { label: 'Pop stash', actionId: 'stashPop', params: { stashRef } },
-      { label: 'New branch from stash…', actionId: 'stashCreateBranch', params: { stashRef }, prompt: { title: 'Branch name', key: 'name' } },
-      { label: 'Drop stash', actionId: 'stashDrop', params: { stashRef }, confirm: `Drop stash "${row.subject}"? This cannot be undone.`, destructive: true },
+      { label: 'Apply stash', actionId: 'stashApply', params: stash },
+      { label: 'Pop stash', actionId: 'stashPop', params: stash },
+      { label: 'New branch from stash…', actionId: 'stashCreateBranch', params: stash, prompt: { title: 'Branch name', key: 'name' } },
+      { label: 'Drop stash', actionId: 'stashDrop', params: stash, confirm: `Drop stash "${row.subject}"? This cannot be undone.`, destructive: true },
     ];
   }
 
@@ -48,7 +66,8 @@ export function rowActions(row: Target, { currentBranch, remotes }: { currentBra
         actions.push({ label: `Rebase ${currentBranch} onto ${name}`, actionId: 'rebase', params: { upstream: name, refType: 'branch' } });
       }
     }
-    if (remotes.length) actions.push({ label: `Push ${name}`, actionId: 'pushBranch', params: { branch: name, remotes: [remotes.includes('origin') ? 'origin' : remotes[0]], setUpstream: true, force: 'none' } });
+    const push = pushAction(name, upstreams[name], remotes);
+    if (push) actions.push(push);
     actions.push({ label: `Rename ${name}…`, actionId: 'renameBranch', params: { oldName: name }, prompt: { title: 'New name', key: 'newName', initial: name } });
     if (name !== currentBranch) actions.push({ label: `Delete ${name}`, actionId: 'deleteBranch', params: { name }, confirm: `Delete branch ${name}?`, destructive: true });
   }
@@ -58,7 +77,8 @@ export function rowActions(row: Target, { currentBranch, remotes }: { currentBra
     actions.push({ label: `Delete ${remote}/${name}`, actionId: 'deleteRemoteBranch', params: { remote, shortName: name }, confirm: `Delete branch ${name} on remote ${remote}?`, destructive: true });
   }
   for (const name of refs.tags) {
-    if (remotes.length) actions.push({ label: `Push tag ${name}`, actionId: 'pushTag', params: { tagName: name, remotes } });
+    const remote = defaultRemote(remotes);
+    if (remote) actions.push({ label: `Push tag ${name} to ${remote}`, actionId: 'pushTag', params: { tagName: name, remotes: [remote] } });
     actions.push({ label: `Delete tag ${name}`, actionId: 'deleteTag', params: { name }, confirm: `Delete tag ${name}?`, destructive: true });
   }
   actions.push(

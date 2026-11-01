@@ -6,7 +6,7 @@ import Svg, { Circle, Path } from 'react-native-svg';
 
 import { Sheet, type SheetOption } from '@/components/Sheet';
 import { TextPrompt } from '@/components/TextPrompt';
-import { forceRetry, rowActions, type GraphAction } from '@/git/actions';
+import { forceRetry, pushAction, rowActions, type GraphAction } from '@/git/actions';
 import { graphRows, LANE_WIDTH, ROW_HEIGHT, type GraphRow } from '@/git/graph';
 import { buildLayoutInput, type GraphCommit, type HistoryRow, type Stash, type Uncommitted } from '@/git/history';
 import { relativeTime, shortProjectPath } from '@/sessions/model';
@@ -16,7 +16,7 @@ import { colors, spacing } from '@/theme';
 type Graph = {
   ok?: boolean; error?: string; hasMore: boolean;
   commits: GraphCommit[]; stashes: Stash[]; uncommitted: Uncommitted | null;
-  refs: { heads: { name: string; hash: string; isHead: boolean }[] } | null;
+  refs: { heads: { name: string; hash: string; isHead: boolean; upstream: string | null }[] } | null;
 };
 
 // The desktop's default palette (git-graph-service.js graphColours), until its preferences arrive.
@@ -27,6 +27,10 @@ const DEFAULT_COLOURS = [
 ];
 const PAGE = 300;
 const MORE = 100;
+// The most the computer sends at once.
+const MAX_COMMITS = 5000;
+// A push or a fetch may take the computer up to two minutes.
+const ACTION_TIMEOUT_MS = 130_000;
 
 /** The Git Graph of one repository of a project, with its actions. */
 export default function GraphScreen() {
@@ -56,6 +60,7 @@ export default function GraphScreen() {
   const data = graph.data;
   const headHash = data?.commits.find((c) => c.isHead)?.hash || null;
   const currentBranch = data?.refs?.heads.find((h) => h.isHead)?.name || null;
+  const upstreams = useMemo(() => Object.fromEntries((data?.refs?.heads || []).map((h) => [h.name, h.upstream])), [data]);
   const { history, layout, lanes } = useMemo(() => {
     const history = data && !data.error ? buildLayoutInput(data.commits, data.stashes, data.uncommitted, headHash) : [];
     const { rows, lanes } = graphRows(history);
@@ -73,7 +78,7 @@ export default function GraphScreen() {
   async function run(action: GraphAction) {
     setRunning({ label: action.label, actionId: action.actionId, progress: '' });
     try {
-      const result = await request<{ ok?: boolean; error?: string }>('run-git-graph-action', [projectId, folder, action.actionId, action.params]);
+      const result = await request<{ ok?: boolean; error?: string }>('run-git-graph-action', [projectId, folder, action.actionId, action.params], { timeoutMs: ACTION_TIMEOUT_MS });
       if (result?.error) {
         const retry = forceRetry(action, result.error);
         if (retry) confirmThen(retry, run);
@@ -92,12 +97,10 @@ export default function GraphScreen() {
     else confirmThen(action, run);
   };
 
+  const pushCurrent = currentBranch ? pushAction(currentBranch, upstreams[currentBranch], remoteNames) : null;
   const toolbarOptions: SheetOption[] = [
     ...(remoteNames.length ? [{ label: 'Fetch from all remotes', onPress: () => run({ label: 'Fetch', actionId: 'fetchAllRemotes', params: {} }) }] : []),
-    ...(currentBranch && remoteNames.length ? [{
-      label: `Push ${currentBranch}`,
-      onPress: () => run({ label: `Push ${currentBranch}`, actionId: 'pushBranch', params: { branch: currentBranch, remotes: [remoteNames.includes('origin') ? 'origin' : remoteNames[0]], setUpstream: true, force: 'none' } }),
-    }] : []),
+    ...(pushCurrent ? [{ label: pushCurrent.label, onPress: () => run(pushCurrent) }] : []),
     { label: 'Review changes', onPress: () => router.push({ pathname: '/git', params: { projectId } }) },
   ];
 
@@ -123,7 +126,7 @@ export default function GraphScreen() {
           </Pressable>
         </View>
       ) : null}
-      {data?.error ? <Text style={styles.empty}>{data.error}</Text> : null}
+      {data?.error || graph.error ? <Text style={styles.empty}>{data?.error || graph.error?.message}</Text> : null}
       <FlatList
         data={history}
         keyExtractor={(row) => row.hash}
@@ -143,15 +146,15 @@ export default function GraphScreen() {
         initialNumToRender={25}
         windowSize={11}
         refreshControl={<RefreshControl refreshing={graph.isRefetching && !running} onRefresh={() => { graph.refetch(); }} tintColor={colors.accent} />}
-        onEndReached={() => { if (data?.hasMore && !graph.isFetching) setLimit((l) => l + MORE); }}
+        onEndReached={() => { if (data?.hasMore && !graph.isFetching && limit < MAX_COMMITS) setLimit((l) => Math.min(MAX_COMMITS, l + MORE)); }}
         onEndReachedThreshold={0.5}
         ListEmptyComponent={graph.isLoading ? <ActivityIndicator style={{ margin: spacing.xl }} color={colors.accent} /> : <Text style={styles.empty}>No commits.</Text>}
-        ListFooterComponent={data?.hasMore ? <ActivityIndicator style={{ margin: spacing.lg }} color={colors.textFaint} /> : undefined}
+        ListFooterComponent={data?.hasMore && limit < MAX_COMMITS ? <ActivityIndicator style={{ margin: spacing.lg }} color={colors.textFaint} /> : undefined}
       />
       <Sheet
         visible={!!selected}
         title={selected ? `${selected.shortHash ? `${selected.shortHash} · ` : ''}${selected.subject}` : ''}
-        options={selected ? rowActions(selected, { currentBranch, remotes: remoteNames }).map((action) => ({ label: action.label, destructive: action.destructive, onPress: () => choose(action) })) : []}
+        options={selected ? rowActions(selected, { currentBranch, remotes: remoteNames, upstreams }).map((action) => ({ label: action.label, destructive: action.destructive, onPress: () => choose(action) })) : []}
         onClose={() => setSelected(null)}
       />
       <Sheet visible={toolbar} title={shortProjectPath(folder || '')} options={toolbarOptions} onClose={() => setToolbar(false)} />

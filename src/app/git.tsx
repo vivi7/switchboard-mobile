@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { changeRows, statusLetter, type Change, type Repository } from '@/git/model';
@@ -25,6 +25,9 @@ export default function GitScreen() {
     refetchOnMount: 'always',
   });
   const repositories = info.data?.repositories || [];
+  // Back from the Git Graph, where an action may have changed everything.
+  const { refetch } = info;
+  useFocusEffect(useCallback(() => { refetch(); }, [refetch]));
 
   return (
     <View style={styles.screen}>

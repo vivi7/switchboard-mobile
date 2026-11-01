@@ -254,8 +254,8 @@ export class RemoteClient {
     this.scheduleRetry(code === 1001 ? 'Mobile app access was turned off on the computer' : 'The connection was lost');
   }
 
-  /** Call a method on the computer. Rejects when offline, on an error reply, or after the timeout. */
-  request<T = any>(method: string, params: unknown[] = []): Promise<T> {
+  /** Call a method on the computer. Rejects when offline, on an error reply, or after the timeout (timeoutMs for a call known to be slow). */
+  request<T = any>(method: string, params: unknown[] = [], { timeoutMs }: { timeoutMs?: number } = {}): Promise<T> {
     const connection = this.connection;
     if (!connection) return Promise.reject(new Error('Not connected to the computer'));
     const id = this.nextId++;
@@ -263,7 +263,7 @@ export class RemoteClient {
       const timer = setTimeout(() => {
         this.pending.delete(id);
         reject(new Error(`${method} took too long`));
-      }, this.options.requestTimeoutMs ?? 20000);
+      }, timeoutMs ?? this.options.requestTimeoutMs ?? 20000);
       this.pending.set(id, { resolve, reject, timer });
       connection.ws.send(connection.channel.seal({ id, method, params }));
     });

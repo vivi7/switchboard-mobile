@@ -90,6 +90,14 @@ test('a slow reply times out', async () => {
   await client.start();
   desktop.receive = () => {}; // the computer stops answering
   await expect(client.request('get-usage')).rejects.toThrow('get-usage took too long');
+  // A call known to be slow (a push) can wait longer.
+  const slow = client.request('get-usage', [], { timeoutMs: 50 });
+  await wait(20);
+  let settled = false;
+  slow.then(() => { settled = true; }, () => { settled = true; });
+  await wait(5);
+  expect(settled).toBe(false);
+  await expect(slow).rejects.toThrow('get-usage took too long');
   client.stop();
 });
 

@@ -51,9 +51,9 @@ export function onDesktopEvent(listener: DesktopEventListener): () => void {
 }
 
 /** Call the computer. Rejects when not connected. */
-export function request<T = any>(method: string, params: unknown[] = []): Promise<T> {
+export function request<T = any>(method: string, params: unknown[] = [], options?: { timeoutMs?: number }): Promise<T> {
   if (!client) return Promise.reject(new Error('No computer is paired'));
-  return client.request<T>(method, params);
+  return client.request<T>(method, params, options);
 }
 
 export const useConnection = create<ConnectionStore>((set, get) => {

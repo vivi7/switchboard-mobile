@@ -54,3 +54,9 @@ test('the diff rebuilds both versions, for any two texts', () => {
     expect(side('-')).toBe(after);
   }
 });
+
+test('a whole new or deleted file needs no comparing, however long', () => {
+  const long = Array.from({ length: 5000 }, (_, i) => `line ${i}`).join('\n');
+  expect(lineDiff('', long)).toHaveLength(5001);
+  expect(lineDiff(long, '')[0].text).toBe('@@ -1,5000 +0,0 @@');
+});
