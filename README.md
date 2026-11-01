@@ -16,9 +16,14 @@ The app talks directly to the Switchboard desktop app running on your computer, 
 - Starts a new Claude, Codex or terminal session in a project, track or folder, with a first message and the same options as the desktop; resumes (with or without changed options) and forks.
 - Renames, pins, moves to a project, marks as read or unread, archives or stops a session (long-press a row).
 - Tells you, while the app is open, when another session needs you or finishes its turn.
+- **Projects**: active, snoozed and done; a project's plan and todos to tick, add to and start a session on; its tracks, sessions, schedules (run now, pause, edit) and folders; snooze, finish, rename, add tracks and attach folders, in place or as a worktree.
+- **Files**: browse a project's folders, read and edit text and Markdown, look at images.
+- **Git**: what changed in each repository, as a list or a tree, with diffs; the **Git Graph** with branches, tags, stashes and uncommitted changes, each commit's files and diffs, and its actions (check out, merge, rebase, push, pull, fetch, branch, tag, cherry-pick, revert, reset, stash), asking first for the ones that lose work.
+- **IDE diffs**: a change Claude proposes in a session started on the computer with IDE emulation, to accept or reject from the phone.
+- Usage limits of Claude and Codex, and Claude's recent activity.
 - Reconnects on its own when the computer comes back, picking each terminal up where it left off, and says why when it cannot.
 
-Coming next: projects (plan, todos, files), and Git with the Git Graph.
+The Git Graph needs a Switchboard build that has it.
 
 ## Use it with Expo Go
 
@@ -39,6 +44,16 @@ In Expo Go, scan the pairing code from inside the app: the phone's own camera ca
 
 The pairing code works once and expires after two minutes. To pair again, right-click the switch on the computer and choose **Pair a phone…**. To remove a phone, right-click the switch and choose **Phones and port…**.
 
+## Install it on a phone
+
+Expo Go is the quickest way to try the app. To have it on the phone as an app of its own:
+
+- **iPhone, free Apple ID.** On a Mac with Xcode, plug the phone in and run `npx expo run:ios --device --configuration Release`. Xcode signs the app with your personal team (add your Apple ID in Xcode › Settings › Accounts and pick the team when asked). An app signed this way stops opening after 7 days: run the same command again to reinstall it.
+- **iPhone, Apple Developer account.** Build with EAS and install through TestFlight: `npx eas-cli@latest build:configure`, then `npx eas-cli@latest build --platform ios` and `npx eas-cli@latest submit --platform ios`.
+- **Android.** With Android Studio's SDK installed, `npx expo run:android --variant release` builds and installs a release APK on a phone connected over USB (with USB debugging on). To build an APK to share instead, use EAS: `npx eas-cli@latest build:configure`, set the profile's Android build type to an APK, then `npx eas-cli@latest build --platform android --profile preview`.
+
+A build of its own registers the `switchboard://` scheme, so the phone's camera can open a pairing QR code directly.
+
 ## How it works
 
 - With the switch on, Switchboard listens on every network interface, on port 47100 by default. With the switch off, nothing listens.
@@ -51,7 +66,7 @@ The protocol lives in one file shared with Switchboard: `scripts/sync-shared.mjs
 ## Development
 
 ```bash
-npm test              # Jest: the protocol client, pairing links, the session list
+npm test              # Jest: the protocol client, pairing links, sessions, projects, Git, diffs, usage
 npm run typecheck
 npm run lint
 npm run sync-shared   # copy the shared modules from ../switchboard (master)
