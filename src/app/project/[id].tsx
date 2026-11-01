@@ -121,6 +121,12 @@ export default function ProjectScreen() {
           {!project.schedules.length ? <Text style={styles.empty}>Nothing scheduled.</Text> : null}
         </Section>
 
+        {project.folders.length ? (
+          <Section title="Git">
+            <InfoRow title="Changes, history and Git Graph" meta={project.folders.map((f) => shortProjectPath(f.path)).join(', ')} onPress={() => router.push({ pathname: '/git', params: { projectId: project.id, title: project.name } })} />
+          </Section>
+        ) : null}
+
         <Section title="Files">
           {roots.map((root) => (
             <InfoRow key={root.path} title={root.title} meta={root.hint} onPress={() => router.push({ pathname: '/files', params: { root: root.path, title: root.title } })}

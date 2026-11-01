@@ -43,6 +43,10 @@ export default function RootLayout() {
         <Stack.Screen name="files" options={{ title: 'Files' }} />
         <Stack.Screen name="file" options={{ title: 'File' }} />
         <Stack.Screen name="schedule" options={{ title: 'Schedule' }} />
+        <Stack.Screen name="git" options={{ title: 'Git' }} />
+        <Stack.Screen name="diff" options={{ title: 'Diff' }} />
+        <Stack.Screen name="graph" options={{ title: 'Git Graph' }} />
+        <Stack.Screen name="commit" options={{ title: 'Commit' }} />
       </Stack>
       <AttentionToast />
     </QueryClientProvider>
