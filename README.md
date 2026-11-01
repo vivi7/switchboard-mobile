@@ -1,56 +1,41 @@
-# Welcome to your Expo app 👋
+# Switchboard Mobile
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A companion app for [Switchboard](https://github.com/doctly/switchboard): browse and manage your Claude Code and Codex sessions and projects from your phone.
 
-## Get started
+The app talks directly to the Switchboard desktop app running on your computer, over your own [Tailscale](https://tailscale.com/) network. There is no cloud relay and no account: the phone and the computer only ever talk to each other.
 
-1. Install dependencies
+> **Status:** early development. The remote-access API it needs is not in a Switchboard release yet.
 
-   ```bash
-   npm install
-   ```
+## How it works
 
-2. Start the app
+- Switchboard listens on `127.0.0.1` only. `tailscale serve` publishes it to the devices on your tailnet, with a valid HTTPS certificate.
+- You pair the phone by scanning a QR code shown in Switchboard's settings. Each phone gets its own token, which you can revoke from the desktop at any time.
+- The app uses one WebSocket for requests, live session status and terminal output.
 
-   ```bash
-   npx expo start
-   ```
+## Planned features
 
-In the output, you'll find options to open the app in a
+- Every session, grouped by folder, with its live status (working, waiting for you, unread) and full-text search.
+- A live terminal for any running session, with a key bar for Esc, Tab, arrows and Ctrl-C.
+- A chat-style view of the conversation.
+- Start, resume, fork and stop sessions.
+- Projects: tracks, plan progress and todos.
+- Git status and diffs, and a Git Graph with branch and commit actions.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## Development
 
-You can start developing by editing the files inside the **src/app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+Requirements: Node.js 20 or newer, Xcode for iOS, Android Studio for Android.
 
 ```bash
-npm run reset-project
+npm install
+npx expo start          # dev server
+npx expo run:ios        # build and run on the iOS simulator or a device
+npx expo run:android    # build and run on the Android emulator or a device
+npm run typecheck
+npm run lint
 ```
 
-This command will move the starter code to the **example** directory and create a blank **src/app** directory where you can start developing.
+Add dependencies with `npx expo install <package>`, so their versions match the Expo SDK.
 
-### Other setup steps
+## License
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+MIT. See [LICENSE](LICENSE).

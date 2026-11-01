@@ -1,14 +1,15 @@
 {
   "expo": {
-    "name": "switchboard-mobile",
+    "name": "Switchboard",
     "slug": "switchboard-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "switchboardmobile",
+    "scheme": "switchboard",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "io.github.vivi7.switchboard"
     },
     "android": {
       "adaptiveIcon": {
@@ -17,7 +18,8 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "io.github.vivi7.switchboard"
     },
     "web": {
       "output": "server",
